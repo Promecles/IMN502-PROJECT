@@ -38,14 +38,30 @@ public class BuildingPiece : MonoBehaviour
     {
         Debug.Log($"Building zone position: {buildingZone.position}");
         Debug.Log($"Before: {transform.position}");
-        float xPosition = Mathf.Round((transform.position.x - buildingZone.position.x) / 0.2f) * 0.2f;
-        float zPosition = Mathf.Round((transform.position.z - buildingZone.position.z) / 0.2f) * 0.2f;
+        float xPosition = Mathf.Round((transform.position.x - buildingZone.position.x) / 1f) * 1f;
+        float zPosition = Mathf.Round((transform.position.z - buildingZone.position.z) / 1f) * 1f;
 
-        //RaycastHit raycastHit = Physics.Raycast(grabInteractable.transform.position);
+        float halfHeight = objectCollider.bounds.size.y / 2;
         
-        float yPosition = Mathf.Round((transform.position.y - buildingZone.position.y) / 0.2f) * 0.2f;
+        RaycastHit raycastHit;
+        float newY = 0;
+        Vector3 rayOrigin = new Vector3(xPosition + buildingZone.position.x,transform.position.y + halfHeight + 0.01f, zPosition + buildingZone.position.z);
+        
+        objectCollider.enabled = false;
 
-        transform.position = new Vector3(xPosition + buildingZone.position.x, yPosition + buildingZone.position.y, zPosition + buildingZone.position.z);
+        Vector3 rotation = new Vector3(Mathf.Round(transform.eulerAngles.x / 90) * 90, Mathf.Round(transform.eulerAngles.y / 90) * 90, Mathf.Round(transform.eulerAngles.z / 90) * 90);
+        
+        if (Physics.Raycast(rayOrigin, Vector3.down, out raycastHit, 10f))
+        {
+            newY = raycastHit.point.y + halfHeight;
+            Debug.Log($"Hit object: {raycastHit.collider.name}");
+            Debug.Log($"Hit position: {raycastHit.point}");
+        }
+
+        objectCollider.enabled = true;
+        
+        transform.position = new Vector3(xPosition + buildingZone.position.x, newY, zPosition + buildingZone.position.z);
+        transform.eulerAngles = rotation;
         Debug.Log($"After: {transform.position}");
     }
 }
