@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -9,7 +10,10 @@ public class BuildingPiece : MonoBehaviour
     private Rigidbody objectRigidBody;
     
     public Transform buildingZone;
+    public Transform buildingStructure;
 
+    private bool isPartOfStructure;
+    
     private Collider objectCollider;
 
     private void Awake()
@@ -28,6 +32,9 @@ public class BuildingPiece : MonoBehaviour
         
         SnapToGrid();
 
+        if (isPartOfStructure)
+            return;
+        
         objectRigidBody.isKinematic = false;
         objectRigidBody.linearVelocity = Vector3.zero;
         objectRigidBody.angularVelocity = Vector3.zero;
@@ -118,6 +125,68 @@ public class BuildingPiece : MonoBehaviour
         objectCollider.enabled = true;
         
         transform.position = new Vector3(xPosition + buildingZone.position.x, newY, zPosition + buildingZone.position.z);
+
+        if (buildingStructure == null)
+        {
+            buildingStructure = hitPiece.buildingStructure;
+            if (buildingStructure == null)
+            {
+                GameObject newStructure = new GameObject("BuildingStructure");
+                buildingStructure = newStructure.transform;
+
+                Rigidbody structureRigidbody = newStructure.AddComponent<Rigidbody>();
+                structureRigidbody.useGravity = true;
+
+                newStructure.AddComponent<XRGrabInteractable>();
+            }
+        }
+        
+        buildingStructure.position = hitPiece.transform.position;
+        
+        hitPiece.transform.SetParent(buildingStructure);
+        hitPiece.buildingStructure = buildingStructure;
+        transform.SetParent(buildingStructure);
+
+        hitPiece.grabInteractable.enabled = false;
+        grabInteractable.enabled = false;
+
+        Destroy(hitPiece.grabInteractable);
+        Destroy(grabInteractable);
+        
+        buildingStructure.GetComponent<XRGrabInteractable>().enabled = true;
+
+        hitPiece.isPartOfStructure = true;
+        isPartOfStructure = true;
+
+        StartCoroutine(RemoveRigidBodies(hitPiece));
+        
         Debug.Log($"After: {transform.position}");
+    }
+
+    private IEnumerator RemoveRigidBodies(BuildingPiece piece)
+    {
+        yield return null;
+
+        Destroy(piece.objectRigidBody);
+        Destroy(objectRigidBody);
+    }
+
+    public void DetachFromStructure()
+    {
+        XRGrabInteractable structureInteractable = buildingStructure.GetComponent<XRGrabInteractable>();
+        structureInteractable.colliders.Remove(objectCollider);
+        
+        transform.SetParent(null);
+
+        objectRigidBody = gameObject.AddComponent<Rigidbody>();
+        objectRigidBody.useGravity = true;
+        objectRigidBody.isKinematic = false;
+
+        grabInteractable = gameObject.AddComponent<XRGrabInteractable>();
+        grabInteractable.selectExited.AddListener(OnReleased);
+        grabInteractable.selectEntered.AddListener(OnPickUp);
+
+        isPartOfStructure = false;
+        buildingStructure = null;
     }
 }
